@@ -15,6 +15,7 @@ ReadmiRNA = function(cancerType, tumorStage){
   #p x n
   #p name := miRNA name
   #n name := cancer_stage_index
+  parent = "/Users/zhongningchen/Data/miRNA2"
   f = paste(parent, cancerType, sep = "/")
   
   manif = paste(f, "Manifest", paste(tumorStage, "txt", sep = "."), sep = "/")
@@ -28,16 +29,30 @@ ReadmiRNA = function(cancerType, tumorStage){
   
   df = data.frame(dft[,2])
   rownames(df) = dft[,1]
-  colnames(df) = paste(cancerType, tumorStage, toString(1), sep = "_")
+  ####
+  
+  f2 = paste(f, "Manifest", paste("one2one", "txt", sep = "."), sep = "/")
+  df2 = as.matrix(read.table(f2))[-1,] #df2[,3] is miRNA, df2[,4] is pt ID
+  w = which(df2[,3] == toString(manifest_subset$filename[1]))
+  cname = df2[w, 4]
+  ###
+  
+  colnames(df) = cname
   df[,1] = as.numeric(as.character(df[,1]))
   
   for(i in 2:length(manifest_subset$filename)){
     fn = paste(directory, toString(manifest_subset$filename[i]), sep = "/")
     dft = as.matrix(read.table(fn))
     dft = dft[-1,]
+    
+    if (length(which(df2[,3] == toString(manifest_subset$filename[i]))) > 0){
+      w = which(df2[,3] == toString(manifest_subset$filename[i]))
+      tempSampleName = df2[w, 4]
+      df[tempSampleName] = as.numeric(as.character(dft[,2]))
+      
+    }
+      
 
-    tempSampleName = paste(cancerType, tumorStage, toString(i), sep = "_")
-    df[tempSampleName] = as.numeric(as.character(dft[,2]))
   }
   
   return(df)
@@ -55,6 +70,11 @@ Zero_filter = function(df1, df2){
   
   return(comp3)
   
+}
+filtered = function(cancerType, tumorStage, nor){
+  miRNA = ReadmiRNA("LUAD", tumorStage)
+  fltr = Zero_filter(miRNA, nor)
+  return(miRNA[fltr,])
 }
 
 DE = function(df_temp, normal){
@@ -97,7 +117,7 @@ stage.compare2 = function(comp, NORM, stage, ts){
   return(DE(comp.filter, NORM.filter))
   
 }
-#stage.compare3 = function(comp, NORM, stage){
+stage.compare3 = function(comp, NORM, stage){
 
   filter = Zero_filter(comp, NORM)
   comp.filter = comp[filter,]
@@ -105,6 +125,22 @@ stage.compare2 = function(comp, NORM, stage, ts){
   
   return(stage.comparison(comp.filter, NORM.filter))
   
+}
+
+{
+miRNA.LUAD.ia = filtered("LUAD", tumorStageList[1], miRNA.LUAD.normal)
+miRNA.LUAD.ib = filtered("LUAD", tumorStageList[2], miRNA.LUAD.normal)
+miRNA.LUAD.iia = filtered("LUAD", tumorStageList[3], miRNA.LUAD.normal)
+miRNA.LUAD.iib = filtered("LUAD", tumorStageList[4], miRNA.LUAD.normal)
+miRNA.LUAD.iii = filtered("LUAD", tumorStageList[5], miRNA.LUAD.normal)
+miRNA.LUAD.iv = filtered("LUAD", tumorStageList[6], miRNA.LUAD.normal)
+
+ia.DE2 = DE(miRNA.LUAD.ia, miRNA.LUAD.normal[rownames(miRNA.LUAD.ia),])
+ib.DE2 = DE(miRNA.LUAD.ib, miRNA.LUAD.normal[rownames(miRNA.LUAD.ib),])
+iia.DE2 = DE(miRNA.LUAD.iia, miRNA.LUAD.normal[rownames(miRNA.LUAD.iia),])
+iib.DE2 = DE(miRNA.LUAD.iib, miRNA.LUAD.normal[rownames(miRNA.LUAD.iib),])
+iii.DE2 = DE(miRNA.LUAD.iii, miRNA.LUAD.normal[rownames(miRNA.LUAD.iii),])
+iv.DE2 = DE(miRNA.LUAD.iv, miRNA.LUAD.normal[rownames(miRNA.LUAD.iv),])
 }
 
 miRNA.LUAD.comp = ReadmiRNA("LUAD", "complement")
@@ -122,8 +158,8 @@ iia.DE = stage.compare2(miRNA.LUAD.comp, miRNA.LUAD.normal, stage.LUAD, tumorSta
 iib.DE = stage.compare2(miRNA.LUAD.comp, miRNA.LUAD.normal, stage.LUAD, tumorStageList[4])
 iii.DE = stage.compare2(miRNA.LUAD.comp, miRNA.LUAD.normal, stage.LUAD, tumorStageList[5])
 
-sum(stage.LUAD$state == tumorStageList[1])
-sum(stage.LUAD$state == tumorStageList[2])
-sum(stage.LUAD$state == tumorStageList[3])
-sum(stage.LUAD$state == tumorStageList[4])
-sum(stage.LUAD$state == tumorStageList[5])
+names_only.miRNA1 = rownames(ia.DE)
+names_only.miRNA2 = rownames(ib.DE)
+names_only.miRNA3 = rownames(iia.DE)
+names_only.miRNA4 = rownames(iib.DE)
+names_only.miRNA5 = rownames(iii.DE)
