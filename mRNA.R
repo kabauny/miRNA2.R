@@ -15,6 +15,7 @@ ReadmRNA = function(cancerType, tumorStage){
   #p x n
   #p name := miRNA name
   #n name := cancer_stage_index
+  parent = "/Users/zhongningchen/Data/mRNA"
   f = paste(parent, cancerType, sep = "/")
   
   manif = paste(f, "Manifest", paste(tumorStage, "txt", sep = "."), sep = "/")
@@ -29,15 +30,28 @@ ReadmRNA = function(cancerType, tumorStage){
   
   df = data.frame(dft$V2)
   rownames(df) = dft$V1
-  colnames(df) = paste(cancerType, tumorStage, toString(1), sep = "_")
+  
+  f2 = paste(f, "Manifest", paste("one2one", "txt", sep = "."), sep = "/")
+  df2 = as.matrix(read.table(f2))[-1,] #df2[,3] is miRNA, df2[,4] is pt ID
+  w = which(df2[,2] == toString(manifest_subset$filename[1]))
+  cname = df2[w, 4]
+  
+  colnames(df) = cname
   
   
   for(i in 2:length(manifest_subset$filename)){
     fn = paste(directory, toString(manifest_subset$filename[i]), sep = "/")
     dft = read.table(gzfile(fn))
     dft = head(dft, -5)
-    tempSampleName = paste(cancerType, tumorStage, toString(i), sep = "_")
-    df[tempSampleName] = dft$V2
+    
+    
+    if (length(which(df2[,2] == toString(manifest_subset$filename[i]))) > 0){
+      w = which(df2[,2] == toString(manifest_subset$filename[i]))
+      tempSampleName = df2[w, 4]
+      df[tempSampleName] = as.numeric(as.character(dft[,2]))
+      
+    }
+
   }
   
   return(df)
@@ -106,16 +120,38 @@ mRNA.LUAD.comp.filtered = mRNA.LUAD.comp[filter,]
 mRNA.LUAD.normal.filtered = mRNA.LUAD.normal[filter,]
 mRNA.DE = DE(df_temp = mRNA.LUAD.comp.filtered, normal = mRNA.LUAD.normal.filtered)
 
+
+#differential expression of mRNA 
 mRNA.ia.DE = stage.compare2(mRNA.LUAD.comp, mRNA.LUAD.normal, mRNA.stage.LUAD, tumorStageList[1])
 mRNA.ib.DE = stage.compare2(mRNA.LUAD.comp, mRNA.LUAD.normal, mRNA.stage.LUAD, tumorStageList[2])
 mRNA.iia.DE = stage.compare2(mRNA.LUAD.comp, mRNA.LUAD.normal, mRNA.stage.LUAD, tumorStageList[3])
 mRNA.iib.DE = stage.compare2(mRNA.LUAD.comp, mRNA.LUAD.normal, mRNA.stage.LUAD, tumorStageList[4])
 mRNA.iii.DE = stage.compare2(mRNA.LUAD.comp, mRNA.LUAD.normal, mRNA.stage.LUAD, tumorStageList[5])
 
-sum(mRNA.stage.LUAD$state == tumorStageList[1])
-sum(mRNA.stage.LUAD$state == tumorStageList[2])
-sum(mRNA.stage.LUAD$state == tumorStageList[3])
-sum(mRNA.stage.LUAD$state == tumorStageList[4])
-sum(mRNA.stage.LUAD$state == tumorStageList[5])
+#differential expression ordered by P value
+mRNA.ia.DE = mRNA.ia.DE[order(mRNA.ia.DE$PValue),]
+mRNA.ib.DE = mRNA.ib.DE[order(mRNA.ib.DE$PValue),]
+mRNA.iia.DE = mRNA.iia.DE[order(mRNA.iia.DE$PValue),]
+mRNA.iib.DE = mRNA.iib.DE[order(mRNA.iib.DE$PValue),]
+mRNA.iii.DE = mRNA.iii.DE[order(mRNA.iii.DE$PValue),]
+
+names_only.mRNA1 = rownames(mRNA.ia.DE)
+names_only.mRNA2 = rownames(mRNA.ib.DE)
+names_only.mRNA3 = rownames(mRNA.iia.DE)
+names_only.mRNA4 = rownames(mRNA.iib.DE)
+names_only.mRNA5 = rownames(mRNA.iii.DE)
+
+
+
+
+# names_only.mRNA.ia.DE = gsub("\\..*", "",rownames(mRNA.ia.DE))
+# names_only.mRNA.ib.DE = gsub("\\..*", "",rownames(mRNA.ib.DE))
+# names_only.mRNA.iia.DE = gsub("\\..*", "",rownames(mRNA.iia.DE))
+# names_only.mRNA.iib.DE = gsub("\\..*", "",rownames(mRNA.iib.DE))
+# names_only.mRNA.iii.DE = gsub("\\..*", "",rownames(mRNA.iii.DE))
+
+write.csv(names_only.mRNA.ia.DE, "names_only_mRNA_stage_ia_DE.csv", row.names = F)
+write.csv(names_only.mRNA.iii.DE, "names_only_mRNA_stage_iii_DE.csv", row.names = F)
+
 
 
